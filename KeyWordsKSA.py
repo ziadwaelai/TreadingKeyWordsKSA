@@ -83,14 +83,11 @@ def update_google_sheet(sheet_name, keywords):
 if __name__ == "__main__":
     while True:
         start_time = time.time()
-
         # Step 1: Scrape trending topics
         saudi_trends = scrape_saudi_trends()
         print("Trending Topics in Saudi Arabia:")
         for idx, trend in enumerate(saudi_trends, start=1):
             print(f"{idx}. {trend}")
-
-        
 
         # Step 2: Process trends list to generate keywords
         if saudi_trends:
@@ -110,6 +107,10 @@ if __name__ == "__main__":
         # Print execution time
         print(f"\nTime taken in minutes: {(time.time() - start_time)/60:.2f}")
 
-        # Wait for 3 hours before running the script again
-        time.sleep(10800) # 3 hours = 10800 seconds
-        print("Script will run again after 3 hours...\n")
+        # Wait for 1 hours before running the script again
+        print("Script will run again after 1 hours...\n")
+        time.sleep(3600) # Sleep for 1 
+        
+
+# host server onshobbak  
+# fetch tweets 
