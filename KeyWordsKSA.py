@@ -40,12 +40,21 @@ def scrape_saudi_trends():
 # Function to process the trends list with the enhanced prompt
 def get_top_30_keywords(trendsList, model):
     template = """
-        This is the treading topics in KSA on Twitter(X): {trendsList}.  
-        Use this information to generate the top 30 keywords for the content strategy.
-        as the Goal of this task to `GET THE MOST FREQUENTLY USED WORDS IN THE TRENDS`.
-        you must filter out the stop words and the irrelevant words,politics,nudity,and the names of the people.
-        make sure to return the keywords in a comma-separated list as `keyword1, keyword2, keyword3, ...`.
-     """
+        Analyze the following trending topics in Saudi Arabia on Twitter (X): {trendsList}.
+        Your task is to generate a list of the top 30 most relevant keywords for content strategy. 
+        Follow these guidelines:
+
+        1. The goal is to identify the most frequently used **meaningful words** in the trends.
+        2. Exclude the following:
+        - Stop words (e.g., "and", "the", "of").
+        - Irrelevant words related to politics, nudity, or personal names.
+        - Any hashtags (#) or mentions (@) present in the text.
+        3. Focus on extracting keywords that are relevant, concise, and suitable for content strategy purposes.
+        4. Return the keywords in a **comma-separated list** format: `keyword1, keyword2, keyword3, ...`.
+
+        Make sure the final output is clean, accurate, and devoid of any formatting errors or duplicates.
+    """
+
     prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | model
     return chain.invoke({"trendsList": trendsList}).content
