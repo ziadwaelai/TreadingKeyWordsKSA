@@ -1,0 +1,7 @@
+selenium
+webdriver-manager
+langchain-openai
+langchain-core
+gspread
+oauth2client
+python-dotenv
