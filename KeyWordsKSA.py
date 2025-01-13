@@ -40,20 +40,34 @@ def scrape_saudi_trends():
 # Function to process the trends list with the enhanced prompt
 def get_top_30_keywords(trendsList, model):
     template = """
-        Analyze the following trending topics in Saudi Arabia on Twitter (X): {trendsList}.
-        Your task is to generate a list of the top 30 most relevant keywords for content strategy. 
+        Analyze the following trending topics in Saudi Arabia on Twitter (X): {trending_topics}.
+        Your task is to generate a list of **up to 50** of the most relevant and meaningful keywords for content strategy. 
         Follow these guidelines:
 
-        1. The goal is to identify the most frequently used **meaningful words** in the trends.
-        2. Exclude the following:
-        - Stop words (e.g., "and", "the", "of").
-        - Irrelevant words related to politics, nudity, or personal names.
-        - Any hashtags (#) or mentions (@) present in the text.
-        3. Focus on extracting keywords that are relevant, concise, and suitable for content strategy purposes.
-        4. Return the keywords in a **comma-separated list** format: `keyword1, keyword2, keyword3, ...`.
+        1. The goal is to identify **frequently used, culturally relevant words or phrases** in the trends.
+        2. Use the local Saudi dialect ("اللهجة السعودية") or phrases unique to Saudi Arabia, including:
+        - Words or traditions related to regions (e.g., الرياض, جدة, مكة).
+        - Cultural events (e.g., العيد, الحج, اليوم الوطني).
+        3. Reflect cultural aspects, traditions, and regional practices unique to Saudi Arabia.
 
-        Make sure the final output is clean, accurate, and devoid of any formatting errors or duplicates.
-    """
+        4. **Exclude** the following:
+        - Generic pan-Arabic terms unless widely used in Saudi Arabia.
+        - Stop words such as "من", "في", "على", "إلى", "هو", "هي", "ما".
+        - Irrelevant content, including:
+            - Political terms.
+            - Names of individuals unless they represent public figures relevant to culture or sports.
+            - Explicit content or inappropriate words.
+        - Hashtags (#) and mentions (@). However, if a hashtag contains meaningful words, extract the content (e.g., "#الاتحاد_الهلال" → "الاتحاد الهلال").
+
+        5. Keywords should be concise, highly relevant, and suitable for a Saudi audience.
+
+        6. Return the keywords in a **clean, comma-separated list** format: `keyword1, keyword2, keyword3, ...` in Arabic.
+
+        7. Ensure the final output is:
+        - Free of duplicates or formatting errors.
+        - Focused solely on cultural relevance and content strategy suitability.
+"""
+
 
     prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | model
