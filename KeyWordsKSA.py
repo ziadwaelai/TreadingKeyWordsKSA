@@ -11,11 +11,60 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from dotenv import load_dotenv
 load_dotenv()
+import requests
+import json
+from datetime import datetime
+
+# API URL and file path
+API_URL = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/riyadh?unitGroup=metric&key=T6LYPSLMFG8EB9RJ99MCG4SC8&contentType=json"
+FILE_PATH = "weather_data.txt"
+
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Initialize the OpenAI model
 model = ChatOpenAI(model='gpt-4o', temperature=0.5)
 
+def get_weather_data():
+    """Fetch weather data from the API and save it if it's a new day."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    try:
+        # Check if the file exists and has today's data
+        with open(FILE_PATH, "r") as file:
+            saved_data = json.load(file)
+            if saved_data.get("date") == today:
+                print("Weather data is already saved for today.")
+                return saved_data
+    
+    except (FileNotFoundError, json.JSONDecodeError):
+        # File doesn't exist or is not valid JSON, proceed to fetch data
+        pass
+
+    # Fetch data from the API
+    print("Fetching new weather data from the API...")
+    response = requests.get(API_URL)
+    
+    if response.status_code == 200:
+        data = response.json()
+        weather_info = {
+            "date": today,
+            "city": data["address"],
+            "temperature": data["days"][0]["temp"],
+            "humidity": data["days"][0]["humidity"],
+            "conditions": data["days"][0]["conditions"],
+            "description": data["days"][0]["description"]
+        }
+
+        # Save the new data to the file
+        with open(FILE_PATH, "w") as file:
+            json.dump(weather_info, file, indent=4)
+        
+        print("Weather data saved successfully.")
+        return weather_info
+    else:
+        print(f"Failed to fetch weather data. Status code: {response.status_code}")
+        return None
 # Function to scrape trending topics in Saudi Arabia
 def scrape_saudi_trends():
     chrome_options = Options()
@@ -38,40 +87,52 @@ def scrape_saudi_trends():
         driver.quit()
 
 # Function to process the trends list with the enhanced prompt
-def get_top_30_keywords(trendsList, model):
+def get_top_50_keywords(trendsList,weather, model):
     template = """
-        Analyze the following trending topics in Saudi Arabia on Twitter (X): {trending_topics}.
-        Your task is to generate a list of **up to 50** of the most relevant and meaningful keywords for content strategy. 
-        Follow these guidelines:
+        Analyze the following trending topics in Saudi Arabia on Twitter (X): {trending_topics}.  
+        Additionally, use the {current_weather} weather conditions in Saudi Arabia to identify seasonally relevant keywords.  
+        Your task is to generate **up to 50 meaningful Arabic keywords** for content strategy that reflect cultural, seasonal, and local relevance.  
 
-        1. The goal is to identify **frequently used, culturally relevant words or phrases** in the trends.
-        2. Use the local Saudi dialect ("اللهجة السعودية") or phrases unique to Saudi Arabia, including:
-        - Words or traditions related to regions (e.g., الرياض, جدة, مكة).
-        - Cultural events (e.g., العيد, الحج, اليوم الوطني).
-        3. Reflect cultural aspects, traditions, and regional practices unique to Saudi Arabia.
+        ### **Guidelines**  
+        1. **Cultural and Regional Relevance**:  
+        - Focus on the local Saudi dialect ("اللهجة السعودية").  
+        - Include terms tied to traditions, events, or locations (e.g., الرياض, جدة, مكة).  
+        - Incorporate cultural or national celebrations (e.g., العيد, الحج, اليوم الوطني).  
 
-        4. **Exclude** the following:
-        - Generic pan-Arabic terms unless widely used in Saudi Arabia.
-        - Stop words such as "من", "في", "على", "إلى", "هو", "هي", "ما".
-        - Irrelevant content, including:
-            - Political terms.
-            - Names of individuals unless they represent public figures relevant to culture or sports.
-            - Explicit content or inappropriate words.
-        - Hashtags (#) and mentions (@). However, if a hashtag contains meaningful words, extract the content (e.g., "#الاتحاد_الهلال" → "الاتحاد الهلال").
+        2. **Seasonal Relevance**:  
+        - For **cold weather**: Include winter-related activities, foods, clothing, or gatherings (e.g., "شتوية," "شال," "جلسة شتوية").  
+        - For **hot weather**: Highlight summer-related activities, refreshment, and outdoor fun (e.g., "بحر," "رحلات," "حر").  
+        - For **neutral weather**: Focus on cultural events, festivals, and everyday trending phrases.  
 
-        5. Keywords should be concise, highly relevant, and suitable for a Saudi audience.
+        3. **Exclusions**:  
+        - **Sports Topics**: Avoid sports-related terms, including team names, matches, or events.  
+        - Generic pan-Arabic terms unless highly significant in Saudi Arabia.  
+        - Stop words (e.g., "من", "في", "على", "إلى", "هو", "هي", "ما").  
+        - Irrelevant content, including:  
+            - Political terms.  
+            - Personal names unless related to culture, entertainment, or history.  
+            - Explicit or inappropriate language.  
+        - Hashtags (#) and mentions (@): Extract meaningful content (e.g., "#جلسة_شتوية" → "جلسة شتوية").  
 
-        6. Return the keywords in a **clean, comma-separated list** format: `keyword1, keyword2, keyword3, ...` in Arabic.
+        4. **Formatting**:  
+        - Return the keywords as a **clean, comma-separated list**: `keyword1, keyword2, keyword3, ...`.  
+        - Ensure all keywords are concise, unique, and culturally relevant.  
 
-        7. Ensure the final output is:
-        - Free of duplicates or formatting errors.
-        - Focused solely on cultural relevance and content strategy suitability.
+        ### **Weather-Specific Notes**  
+        - Use the {current_weather} conditions as a guide:  
+        - **Cold**: Highlight keywords for winter-related activities, foods, or gatherings.  
+        - **Hot**: Focus on summer activities, refreshment, and outdoor fun.  
+        - **Neutral**: Prioritize cultural events, festivals, and everyday phrases.  
+
+        ### **Final Output**  
+        Provide a concise list of **up to 50 keywords** that reflect Saudi culture, current weather conditions, and Twitter trends. Avoid duplicates and formatting errors.
 """
+
 
 
     prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | model
-    return chain.invoke({"trendsList": trendsList}).content
+    return chain.invoke({"trending_topics": trendsList,"current_weather":weather}).content
 
 # Function to update Google Sheet
 def update_google_sheet(sheet_name, keywords):
@@ -85,7 +146,7 @@ def update_google_sheet(sheet_name, keywords):
         #     print(sheet.title)
 
         # Open the sheet
-        sheet = client.open(sheet_name).sheet1
+        sheet = client.open(sheet_name).worksheet('Keywords')
 
         # Update the sheet with keywords
         for idx, keyword in enumerate(keywords.split(','), start=2):
@@ -111,14 +172,22 @@ if __name__ == "__main__":
         print("Trending Topics in Saudi Arabia:")
         for idx, trend in enumerate(saudi_trends, start=1):
             print(f"{idx}. {trend}")
-
+        
+        # Get weather data
+        weather = get_weather_data()
+        if weather is None:
+            weather="the current weather is normal"
+        
         # Step 2: Process trends list to generate keywords
         if saudi_trends:
             trendsList = ", ".join(saudi_trends)
-            top_30_keywords = get_top_30_keywords(trendsList, model)
+            top_30_keywords = get_top_50_keywords(trendsList,weather, model)
+
+            # Remove any duplicates
+            top_30_keywords = ",".join(list(set(top_30_keywords.split(',')))) 
 
             # Step 3: Update Google Sheet
-            sheet_name = "Trending Keywords Saudi"  
+            sheet_name = "Trending Keywords Saudi Based on Input"  
             
             update_google_sheet(sheet_name, top_30_keywords)
 
@@ -134,6 +203,3 @@ if __name__ == "__main__":
         print("Script will run again after 1 hours...\n")
         time.sleep(3600) # Sleep for 1 
         
-
-# host server onshobbak  
-# fetch tweets 
