@@ -320,7 +320,7 @@ def update_google_sheet(sheet_name, keywords, column="A"):
 
         # Add timestamp in column C
         time_now = time.strftime("%Y-%m-%d %H:%M:%S")
-        cell_time_formatted = f"Last Updated: {time_now}"
+        cell_time_formatted = f"✅Last Updated: {time_now}"
         sheet.update_cell(2, 3, cell_time_formatted)
 
         print(f"Google Sheet updated successfully in column {column}.")
@@ -354,4 +354,4 @@ if __name__ == "__main__":
 
         print(f"\n✅ Time taken: {(time.time() - start_time) / 60:.2f} minutes")
         print("⏳ Script will run again in 1 hour...\n")
-        time.sleep(3600)
+        time.sleep(18000)
