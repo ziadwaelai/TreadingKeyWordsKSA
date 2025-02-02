@@ -335,7 +335,7 @@ if __name__ == "__main__":
         start_time = time.time()
 
         saudi_trends = scrape_saudi_trends()
-        historical_keywords = get_historical_keywords("Target", days=3)
+        historical_keywords = get_historical_keywords("Target", days=1)
         print("Historical Keywords high:", historical_keywords["High"])
 
         cleaned_topics = clean_trending_topics(saudi_trends, historical_keywords)
